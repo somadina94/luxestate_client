@@ -12,12 +12,12 @@ import { subscribeToPush } from "@/utils/subscribe-to-push-notification";
 
 type NotificationContextType = {
   notifyUnreadChanged: () => void;
-  requestPermissionAndSubscribe: () => Promise<void>;
+  requestPermissionAndSubscribe: () => Promise<boolean>;
 };
 
 const NotificationContext = createContext<NotificationContextType>({
   notifyUnreadChanged: () => {},
-  requestPermissionAndSubscribe: async () => {},
+  requestPermissionAndSubscribe: async () => false,
 });
 
 const VAPID_KEY =
@@ -34,39 +34,44 @@ export function NotificationProvider({
 }) {
   const subscribedRef = useRef(false);
 
-  const subscribeWebPush = useCallback(async () => {
-    if (!accessToken || !VAPID_KEY || subscribedRef.current) return;
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  const subscribeWebPush = useCallback(async (): Promise<boolean> => {
+    if (!accessToken || !VAPID_KEY) return false;
+    if (subscribedRef.current) return true;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
     try {
       const reg = await navigator.serviceWorker.register("/sw.js", {
         scope: "/",
       });
       await reg.update();
       const payload = await subscribeToPush(VAPID_KEY);
-      if (!payload) return;
+      if (!payload) return false;
       const res = await notificationService.subscribeWebPush(
         payload,
         accessToken,
       );
-      if (res.status === 201) subscribedRef.current = true;
+      if (res.status === 201) {
+        subscribedRef.current = true;
+        return true;
+      }
+      return false;
     } catch {
       // subscription failed
+      return false;
     }
   }, [accessToken]);
 
-  const requestPermissionAndSubscribe = useCallback(async () => {
-    if (!accessToken || !VAPID_KEY) return;
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  const requestPermissionAndSubscribe = useCallback(async (): Promise<boolean> => {
+    if (!accessToken || !VAPID_KEY) return false;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
     if (Notification.permission === "granted") {
-      await subscribeWebPush();
-      return;
+      return subscribeWebPush();
     }
-    if (Notification.permission === "denied") return;
+    if (Notification.permission === "denied") return false;
 
     try {
       // Request permission FIRST so the prompt runs in the user-gesture context.
       const permission = await Notification.requestPermission();
-      if (permission !== "granted") return;
+      if (permission !== "granted") return false;
 
       const reg = await navigator.serviceWorker.register("/sw.js", {
         scope: "/",
@@ -75,14 +80,19 @@ export function NotificationProvider({
       const payload = await subscribeToPush(VAPID_KEY, {
         skipPermission: true,
       });
-      if (!payload) return;
+      if (!payload) return false;
       const res = await notificationService.subscribeWebPush(
         payload,
         accessToken,
       );
-      if (res.status === 201) subscribedRef.current = true;
+      if (res.status === 201) {
+        subscribedRef.current = true;
+        return true;
+      }
+      return false;
     } catch {
       // subscription failed
+      return false;
     }
   }, [accessToken, subscribeWebPush]);
 
@@ -92,7 +102,7 @@ export function NotificationProvider({
       "Notification" in window &&
       Notification.permission === "granted"
     ) {
-      subscribeWebPush();
+      void subscribeWebPush();
     }
   }, [subscribeWebPush]);
 

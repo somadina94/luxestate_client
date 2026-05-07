@@ -3,6 +3,8 @@ import { Ticket } from "@/types";
 import { useAppSelector, RootState, AuthState } from "@/store";
 import { useRouter } from "next/navigation";
 import { formatMessageTime } from "@/utils/helpers";
+import { LifeBuoy } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TicketItemProps {
   ticket: Ticket;
@@ -24,20 +26,41 @@ export default function TicketItem({ ticket }: TicketItemProps) {
   }
   const isOpenOrInProgress =
     ticket.status === "open" || ticket.status === "in_progress";
+  const statusLabel = (ticket.status ?? "open").replace("_", " ");
 
   return (
     <div
-      className={`flex flex-row justify-between items-center relative cursor-pointer transition-all duration-300 p-2 rounded-md shadow-sm border ${isOpenOrInProgress ? "bg-gradient-to-br from-[#d9480f]/90 via-[#1c7ed6]/90 to-orange-500/90 hover:from-[#d9480f] hover:via-[#1c7ed6] hover:to-orange-500 text-white [&_.text-muted-foreground]:text-white/90" : "bg-primary/20 hover:bg-primary/50 dark:hover:bg-primary/50"}`}
+      className={cn(
+        "relative flex cursor-pointer items-center justify-between gap-4 rounded-xl border p-4 shadow-sm transition-all duration-200",
+        isOpenOrInProgress
+          ? "border-primary bg-primary text-primary-foreground shadow-primary/10 hover:bg-primary/90 [&_.muted-copy]:text-white/85"
+          : "border-border/80 bg-card text-card-foreground hover:border-primary/30 hover:bg-muted/70 [&_.muted-copy]:text-muted-foreground",
+      )}
       onClick={() => router.push(path)}
     >
-      <div className="flex flex-col">
-        <p className="font-medium">{ticket.title}</p>
-        <p className="text-muted-foreground text-sm">{ticket.status}</p>
-        <p className="text-muted-foreground text-sm">
-          {ticket.user?.first_name} {ticket.user?.last_name}
-        </p>
+      <div className="flex min-w-0 items-start gap-3">
+        <span
+          className={cn(
+            "mt-1 flex size-10 shrink-0 items-center justify-center rounded-full",
+            isOpenOrInProgress ? "bg-white/15 text-white" : "bg-primary/10 text-primary",
+          )}
+        >
+          <LifeBuoy className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="truncate font-semibold">{ticket.title}</p>
+            {isOpenOrInProgress && (
+              <span className="size-2 shrink-0 rounded-full bg-white" aria-label="Open ticket" />
+            )}
+          </div>
+          <p className="muted-copy text-sm capitalize">{statusLabel}</p>
+          <p className="muted-copy truncate text-sm">
+            {ticket.user?.first_name} {ticket.user?.last_name}
+          </p>
+        </div>
       </div>
-      <p className="text-muted-foreground text-sm">
+      <p className="muted-copy shrink-0 text-sm">
         {formatMessageTime(ticket.created_at)}
       </p>
     </div>

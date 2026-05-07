@@ -354,18 +354,26 @@ class AuthService {
     new_password: string,
     confirm_password: string,
   ) {
-    console.log(access_token, current_password, new_password, confirm_password);
     try {
       const response = await axiosInstance.patch(
-        `/auth/update_password?current_password=${current_password}&new_password=${new_password}&confirm_password=${confirm_password}`,
-        undefined,
+        "/auth/update_password",
+        {
+          current_password,
+          new_password,
+          confirm_password,
+        },
         {
           headers: {
             Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
           },
         },
       );
-      return { status: response.status, data: response.data };
+      return {
+        status: response.status,
+        data: response.data,
+        message: response.data?.message,
+      };
     } catch (error: unknown) {
       const axiosError = error as AxiosError;
       if (axiosError.response) {
@@ -373,6 +381,7 @@ class AuthService {
           status: axiosError.response.status,
           data: axiosError.response.data,
           message:
+            (axiosError.response.data as { message?: string })?.message ||
             (axiosError.response.data as { detail?: string })?.detail ||
             "Error updating password",
         };

@@ -152,7 +152,7 @@ class SubscriptionService {
 
   async getSellerSubscriptionPlan(
     access_token: string,
-    subscription_plan_id: number,
+    subscription_plan_id: number | string,
   ) {
     try {
       const response = await axiosInstance.get(
@@ -182,7 +182,7 @@ class SubscriptionService {
 
   async updateSellerSubscriptionPlan(
     access_token: string,
-    subscription_plan_id: number,
+    subscription_plan_id: number | string,
     data: {
       name?: string;
       description?: string;
@@ -222,7 +222,7 @@ class SubscriptionService {
 
   async deleteSellerSubscriptionPlan(
     access_token: string,
-    subscription_plan_id: number,
+    subscription_plan_id: number | string,
   ) {
     try {
       const response = await axiosInstance.delete(
@@ -252,7 +252,7 @@ class SubscriptionService {
 
   async createCheckoutSession(
     access_token: string,
-    subscription_plan_id: number,
+    subscription_plan_id: number | string,
   ) {
     try {
       const response = await axiosInstance.post(

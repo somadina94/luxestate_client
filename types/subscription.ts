@@ -1,8 +1,8 @@
 export interface Subscription {
-  id: number;
+  id: number | string;
   name: string;
-  user_id: number;
-  subscription_plan_id: number;
+  user_id: number | string;
+  subscription_plan_id: number | string;
   status: SubscriptionStatus;
   start_date: string;
   end_date: string;

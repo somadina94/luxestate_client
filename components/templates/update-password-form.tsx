@@ -7,7 +7,14 @@ import * as z from "zod";
 import { authService } from "@/services";
 import { AuthState, RootState, useAppSelector } from "@/store";
 import { toast } from "sonner";
-import { FormControl, FormField, FormItem, FormLabel, Form } from "../ui/form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Form,
+} from "../ui/form";
 import { Input } from "../ui/input";
 import IconButton from "../atoms/IconButton";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
@@ -55,8 +62,7 @@ export default function UpdatePasswordForm() {
       toast.success("Password updated successfully");
       form.reset();
     } else {
-      //   toast.error(response.message as string);
-      console.log(response);
+      toast.error(response.message || "Failed to update password");
     }
     setLoading(false);
   };
@@ -81,8 +87,14 @@ export default function UpdatePasswordForm() {
                   <FormItem>
                     <FormLabel>Current Password</FormLabel>
                     <FormControl>
-                      <Input placeholder="Current Password" {...field} />
+                      <Input
+                        type="password"
+                        autoComplete="current-password"
+                        placeholder="Current Password"
+                        {...field}
+                      />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -93,8 +105,14 @@ export default function UpdatePasswordForm() {
                   <FormItem>
                     <FormLabel>New Password</FormLabel>
                     <FormControl>
-                      <Input placeholder="New Password" {...field} />
+                      <Input
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="New Password"
+                        {...field}
+                      />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -105,8 +123,14 @@ export default function UpdatePasswordForm() {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input placeholder="Confirm Password" {...field} />
+                      <Input
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="Confirm Password"
+                        {...field}
+                      />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />

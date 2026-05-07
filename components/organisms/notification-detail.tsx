@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 
 export default function NotificationDetail() {
   const { id } = useParams();
+  const notificationId = (Array.isArray(id) ? id[0] : id) ?? "";
   const [notification, setNotification] = useState<Notification | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -29,16 +30,17 @@ export default function NotificationDetail() {
   );
   useEffect(() => {
     const fetchNotification = async () => {
+      if (!notificationId || !access_token) return;
       setLoading(true);
       const res = await notificationService.getNotification(
-        Number(id),
+        notificationId,
         access_token as string,
       );
       if (res.status === 200) {
         setNotification(res.data);
         // Mark as read when viewing the detail page
         const markRes = await notificationService.markRead(
-          [Number(id)],
+          [notificationId],
           access_token as string,
         );
         if (markRes.status >= 200 && markRes.status < 300) {
@@ -53,12 +55,13 @@ export default function NotificationDetail() {
       setLoading(false);
     };
     fetchNotification();
-  }, [id, access_token]);
+  }, [notificationId, access_token]);
 
   async function handleDeleteNotification() {
+    if (!notificationId || !access_token) return;
     setIsDeleting(true);
     const res = await notificationService.deleteNotification(
-      Number(id),
+      notificationId,
       access_token as string,
     );
 

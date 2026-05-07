@@ -80,8 +80,8 @@ class NotificationService {
       }
     }
   }
-  /** Request body schema: object with optional additional properties (e.g. { ids?: number[] }) */
-  async markRead(ids: number[], access_token: string) {
+  /** Request body schema: object with optional additional properties (e.g. { ids?: string[] }) */
+  async markRead(ids: Array<number | string>, access_token: string) {
     try {
       const body: Record<string, unknown> = { ids };
       const response = await axiosInstance.patch(
@@ -161,7 +161,7 @@ class NotificationService {
       }
     }
   }
-  async getNotification(notificationId: number, access_token: string) {
+  async getNotification(notificationId: number | string, access_token: string) {
     try {
       const response = await axiosInstance.get(
         `/notifications/${notificationId}`,
@@ -197,7 +197,7 @@ class NotificationService {
       }
     }
   }
-  async deleteNotification(notificationId: number, access_token: string) {
+  async deleteNotification(notificationId: number | string, access_token: string) {
     try {
       const response = await axiosInstance.delete(
         `/notifications/${notificationId}`,

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAppSelector, RootState, AuthState } from "@/store";
 import SettingsItem from "../organisms/settings-item";
-import { CreditCard, Trash2, User, Lock, Trash } from "lucide-react";
+import { BellRing, CreditCard, User, Lock, Trash } from "lucide-react";
 import { useRouter } from "next/navigation";
 import IconButton from "../atoms/IconButton";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import {
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
+import { useNotificationContext } from "@/context/notification-provider";
 
 export default function Settings() {
   const router = useRouter();
@@ -29,7 +30,24 @@ export default function Settings() {
     (state: RootState) => state.auth,
   ) as AuthState;
   const logout = useLogout();
-  const [isOpen, setIsOpen] = useState(false);
+  const { requestPermissionAndSubscribe } = useNotificationContext();
+
+  const handleSubscribePush = async () => {
+    console.info("Push notification settings action clicked");
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      toast.error("Push notifications are not supported in this browser");
+      return;
+    }
+    const subscribed = await requestPermissionAndSubscribe();
+    if (subscribed) {
+      toast.success("Push notifications are enabled");
+    } else if (Notification.permission === "denied") {
+      toast.error("Notifications are blocked. Enable them in your browser settings.");
+    } else {
+      toast.error("Could not subscribe to push notifications. Please try again.");
+    }
+  };
+
   const handleDeleteAccount = async () => {
     setLoading(true);
     const response = await authService.deactivateUser(access_token as string);
@@ -60,13 +78,31 @@ export default function Settings() {
           router.push(`/${user?.role}-dashboard/settings/update-password`);
         }}
       />
+      <button
+        type="button"
+        className="flex w-full cursor-pointer flex-row items-center justify-start gap-4 rounded-lg bg-primary/20 p-4 text-left shadow-sm transition-colors hover:bg-primary/50"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void handleSubscribePush();
+        }}
+      >
+        <BellRing className="h-8 w-8 shrink-0 text-gray-500" />
+        <div className="flex flex-col">
+          <h1 className="text-lg font-bold">Push Notifications</h1>
+          <p className="text-sm text-gray-500">
+            Subscribe to browser push notifications
+          </p>
+        </div>
+      </button>
       {user?.role === "seller" && (
         <SettingsItem
           title="Subscription"
           description="Manage your subscription"
           Icon={CreditCard}
           onClick={() => {
-            router.push(`${user?.role}-dashboard/settings/subscription`);
+            console.info("Subscription settings action clicked");
+            router.push("/seller-dashboard/billing-and-payments");
           }}
         />
       )}

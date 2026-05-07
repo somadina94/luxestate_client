@@ -17,7 +17,7 @@
 //     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 export interface SubscriptionPlan {
-  id: number;
+  id: number | string;
   name: string;
   description: string;
   price: number;

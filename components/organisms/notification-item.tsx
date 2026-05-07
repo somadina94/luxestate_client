@@ -4,6 +4,8 @@ import { useAppSelector, RootState, AuthState } from "@/store";
 import { Notification } from "@/types";
 import { trimToLength, formatMessageTime } from "@/utils/helpers";
 import { useRouter } from "next/navigation";
+import { Bell } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface NotificationItemProps {
   notification: Notification;
@@ -33,15 +35,35 @@ export default function NotificationItem({
       onClick={() => {
         router.push(path);
       }}
-      className={`flex flex-row justify-between items-center cursor-pointer mx-auto max-w-5xl w-full transition-all duration-300 max-w-200 border gap-2 p-2 rounded-md shadow-sm ${isUnread ? "bg-gradient-to-br from-[#d9480f]/90 via-[#1c7ed6]/90 to-orange-500/90 hover:from-[#d9480f] hover:via-[#1c7ed6] hover:to-orange-500 text-white [&_.text-muted-foreground]:text-white/90" : "bg-primary/20 hover:bg-primary/50 dark:hover:bg-primary/50 dark:bg-muted"}`}
+      className={cn(
+        "mx-auto flex w-full max-w-5xl cursor-pointer items-center justify-between gap-4 rounded-xl border p-4 shadow-sm transition-all duration-200",
+        isUnread
+          ? "border-primary bg-primary text-primary-foreground shadow-primary/10 hover:bg-primary/90 [&_.muted-copy]:text-white/85"
+          : "border-border/80 bg-card text-card-foreground hover:border-primary/30 hover:bg-muted/70 [&_.muted-copy]:text-muted-foreground",
+      )}
     >
-      <div className="flex flex-col">
-        <h3 className="text-lg font-medium">{notification.title}</h3>
-        <p className="text-sm text-muted-foreground">
-          {trimToLength(notification.body, 60)}...
-        </p>
+      <div className="flex min-w-0 items-start gap-3">
+        <span
+          className={cn(
+            "mt-1 flex size-9 shrink-0 items-center justify-center rounded-full",
+            isUnread ? "bg-white/15 text-white" : "bg-primary/10 text-primary",
+          )}
+        >
+          <Bell className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className="truncate text-base font-semibold">{notification.title}</h3>
+            {isUnread && (
+              <span className="size-2 shrink-0 rounded-full bg-white" aria-label="Unread" />
+            )}
+          </div>
+          <p className="muted-copy line-clamp-2 text-sm">
+            {trimToLength(notification.body, 90)}
+          </p>
+        </div>
       </div>
-      <p className="text-sm text-muted-foreground">
+      <p className="muted-copy shrink-0 text-sm">
         {formatMessageTime(notification.created_at)}
       </p>
     </div>

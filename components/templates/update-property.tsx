@@ -139,7 +139,7 @@ function propertyToFormValues(p: Property): z.infer<typeof formSchema> {
 
 export default function UpdateProperty() {
   const params = useParams();
-  const propertyId = Number(params?.id);
+  const propertyId = (Array.isArray(params?.id) ? params.id[0] : params?.id) ?? "";
   const [countries, setCountries] = useState<
     { label: string; value: string }[]
   >([]);
@@ -178,7 +178,7 @@ export default function UpdateProperty() {
   });
 
   useEffect(() => {
-    if (!propertyId || Number.isNaN(propertyId)) {
+    if (!propertyId) {
       setLoading(false);
       return;
     }
@@ -276,7 +276,7 @@ export default function UpdateProperty() {
     formState: { isSubmitting, isValid },
   } = form;
 
-  if (!propertyId || Number.isNaN(propertyId)) {
+  if (!propertyId) {
     return (
       <Card className="w-lg mx-auto">
         <CardContent className="pt-6">

@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useConversation } from "@/hooks/use-conversation";
 import { formatMessageTime, trimToLength } from "@/utils/helpers";
+import { MessageCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ChatItemProps {
   conversation: Conversation;
@@ -37,9 +39,23 @@ export default function ChatItem({
 
   const isUnreadLastMessage =
     lastMessage && lastMessage.sender_id !== user?.id && !lastMessage.is_read;
+  const participantName =
+    user?.role === "buyer"
+      ? [conversation.agent_first_name, conversation.agent_last_name]
+          .filter(Boolean)
+          .join(" ") || "Agent"
+      : [conversation.user_first_name, conversation.user_last_name]
+          .filter(Boolean)
+          .join(" ") || "User";
+
   return (
     <div
-      className={`cursor-pointer p-2 transition-all duration-300 max-w-200 border rounded-md shadow-sm relative ${isUnreadLastMessage ? "bg-gradient-to-br from-[#d9480f]/90 via-[#1c7ed6]/90 to-orange-500/90 hover:from-[#d9480f] hover:via-[#1c7ed6] hover:to-orange-500 text-white [&_.text-muted-foreground]:text-white/90" : "bg-primary/20 hover:bg-primary/50 dark:hover:bg-primary/50"} `}
+      className={cn(
+        "relative cursor-pointer rounded-xl border p-4 shadow-sm transition-all duration-200",
+        isUnreadLastMessage
+          ? "border-primary bg-primary text-primary-foreground shadow-primary/10 hover:bg-primary/90 [&_.muted-copy]:text-white/85"
+          : "border-border/80 bg-card text-card-foreground hover:border-primary/30 hover:bg-muted/70 [&_.muted-copy]:text-muted-foreground",
+      )}
       onClick={() => {
         if (user?.role === "buyer") {
           router.push(`/buyer-dashboard/messages/${conversation.id}`);
@@ -50,20 +66,35 @@ export default function ChatItem({
         }
       }}
     >
-      <div className="flex flex-col relative">
-        {conversation.property_title && (
-          <p className="font-medium">
-            {user?.role === "buyer"
-              ? `${conversation.agent_first_name} ${conversation.agent_last_name}`
-              : `${conversation.user_first_name} ${conversation.user_last_name}`}
+      <div className="flex min-w-0 items-start gap-3 pr-20">
+        <span
+          className={cn(
+            "mt-1 flex size-10 shrink-0 items-center justify-center rounded-full",
+            isUnreadLastMessage ? "bg-white/15 text-white" : "bg-primary/10 text-primary",
+          )}
+        >
+          <MessageCircle className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="truncate font-semibold">{participantName}</p>
+            {isUnreadLastMessage && (
+              <span className="size-2 shrink-0 rounded-full bg-white" aria-label="Unread" />
+            )}
+          </div>
+          <p className="muted-copy truncate text-sm">
+            {conversation.property_title || "General conversation"}
           </p>
-        )}
-        <p className="text-muted-foreground text-sm">
-          {conversation.property_title}
-        </p>
-        <p className="text-muted-foreground text-sm">{`${trimToLength(lastMessage?.content ?? "", 60)}...`}</p>
-        <p className="text-muted-foreground text-sm absolute top-4 right-4">{`${formatMessageTime(lastMessageTime)}`}</p>
+          <p className="muted-copy line-clamp-2 text-sm">
+            {lastMessage?.content
+              ? trimToLength(lastMessage.content, 90)
+              : "No messages yet"}
+          </p>
+        </div>
       </div>
+      <p className="muted-copy absolute right-4 top-4 text-sm">
+        {formatMessageTime(lastMessageTime)}
+      </p>
     </div>
   );
 }

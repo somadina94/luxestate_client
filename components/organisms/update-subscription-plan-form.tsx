@@ -50,7 +50,7 @@ const DURATION_TYPES = [
 export default function UpdateSubscriptionPlanForm({
   subscriptionPlanId,
 }: {
-  subscriptionPlanId: number;
+  subscriptionPlanId: number | string;
 }) {
   const router = useRouter();
   const { access_token } = useAppSelector(
