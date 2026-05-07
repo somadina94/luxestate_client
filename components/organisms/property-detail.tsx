@@ -72,6 +72,10 @@ export default function PropertyDetail() {
       }
     };
     const fetchFavorites = async () => {
+      if (!access_token || !user?.id) {
+        setIsFavorite(false);
+        return;
+      }
       const res = await propertyService.getMyFavorites(access_token as string);
       if (res.status === 200) {
         const favorite = res.data.some(
@@ -91,6 +95,11 @@ export default function PropertyDetail() {
   }, [propertyId, access_token, user?.id]);
 
   async function addToFavorite() {
+    if (!access_token || !user) {
+      toast.error("Please log in to save properties");
+      router.push(`/login?from=/properties/${propertyId}`);
+      return;
+    }
     const res = await propertyService.markAsFavorite(
       propertyId || "",
       access_token || "",
@@ -103,6 +112,11 @@ export default function PropertyDetail() {
     }
   }
   async function removeFromFavorite() {
+    if (!access_token || !user) {
+      toast.error("Please log in to manage favorites");
+      router.push(`/login?from=/properties/${propertyId}`);
+      return;
+    }
     const res = await propertyService.removeFromFavorite(
       propertyId || "",
       access_token || "",
@@ -116,6 +130,11 @@ export default function PropertyDetail() {
   }
 
   async function handleContactAgent() {
+    if (!access_token || !user) {
+      toast.error("Please log in to contact the agent");
+      router.push(`/login?from=/properties/${propertyId}`);
+      return;
+    }
     setIsContactingAgent(true);
     const res = await chatService.createConversation(
       {
@@ -157,19 +176,21 @@ export default function PropertyDetail() {
   return (
     <div className="flex flex-col gap-4">
       <Card className="w-full max-w-xl mx-auto relative">
-        <div className="absolute top-6 right-6">
-          {isFavorite ? (
-            <StarIcon
-              className="w-6 h-6 cursor-pointer text-primary"
-              onClick={removeFromFavorite}
-            />
-          ) : (
-            <StarIcon
-              className="w-6 h-6 cursor-pointer"
-              onClick={addToFavorite}
-            />
-          )}
-        </div>
+        {user?.role === "buyer" && (
+          <div className="absolute top-6 right-6">
+            {isFavorite ? (
+              <StarIcon
+                className="w-6 h-6 cursor-pointer text-primary"
+                onClick={removeFromFavorite}
+              />
+            ) : (
+              <StarIcon
+                className="w-6 h-6 cursor-pointer"
+                onClick={addToFavorite}
+              />
+            )}
+          </div>
+        )}
         <CardHeader>
           <CardTitle className="flex flex-col gap-2">
             <span className="text-2xl font-bold">{property?.title}</span>
@@ -318,11 +339,11 @@ export default function PropertyDetail() {
           </CardContent>
         </Card>
       )}
-      {user?.role === "buyer" && (
+      {(user?.role === "buyer" || !user) && (
         <Card className="w-full max-w-xl mx-auto">
           <CardContent>
             <IconButton
-              title="Contact Agent"
+              title={user ? "Contact Agent" : "Log in to Contact Agent"}
               Icon={MailIcon}
               className="w-full"
               onClick={handleContactAgent}
