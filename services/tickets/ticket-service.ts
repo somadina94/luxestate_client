@@ -70,7 +70,7 @@ class TicketService {
       message: "No response from server. Please check your connection.",
     };
   }
-  async getTicket(ticket_id: number, access_token: string) {
+  async getTicket(ticket_id: number | string, access_token: string) {
     try {
       const response = await axiosInstance.get(`/ticket/${ticket_id}`, {
         headers: {
@@ -93,7 +93,7 @@ class TicketService {
       message: "No response from server. Please check your connection.",
     };
   }
-  async getTicketMessages(ticket_id: number, access_token: string) {
+  async getTicketMessages(ticket_id: number | string, access_token: string) {
     try {
       const response = await axiosInstance.get(
         `/ticket/${ticket_id}/messages`,
@@ -172,7 +172,7 @@ class TicketService {
       message: "No response from server. Please check your connection.",
     };
   }
-  async deleteTicket(ticket_id: number, access_token: string) {
+  async deleteTicket(ticket_id: number | string, access_token: string) {
     try {
       const response = await axiosInstance.delete(`/ticket/${ticket_id}`, {
         headers: {

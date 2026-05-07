@@ -6,6 +6,7 @@ import { useAppSelector, RootState, AuthState } from "@/store";
 
 export default function TicketWindowTemplate() {
   const { id } = useParams();
+  const ticketId = (Array.isArray(id) ? id[0] : id) ?? "";
   const { user, access_token } = useAppSelector(
     (state: RootState) => state.auth,
   ) as AuthState;
@@ -13,9 +14,9 @@ export default function TicketWindowTemplate() {
   return (
     <div className="h-full min-h-0 flex flex-col">
       <TicketWindow
-        key={id as string}
-        ticketId={Number(id)}
-        userId={user?.id ?? 0}
+        key={ticketId}
+        ticketId={ticketId}
+        userId={user?.id ?? ""}
         accessToken={access_token}
       />
     </div>

@@ -30,8 +30,8 @@ export default function TicketWindow({
   accessToken,
   initialTicket,
 }: {
-  ticketId: number;
-  userId: number;
+  ticketId: number | string;
+  userId: number | string;
   accessToken: string | null;
   initialTicket?: Ticket | null;
 }) {

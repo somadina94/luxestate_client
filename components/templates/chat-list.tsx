@@ -16,14 +16,15 @@ export default function ChatList() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastMessageTimes, setLastMessageTimes] = useState<
-    Record<number, number>
+    Record<string, number>
   >({});
 
   const onLastMessageTime = useCallback(
-    (conversationId: number, timestamp: string) => {
+    (conversationId: number | string, timestamp: string) => {
+      const key = String(conversationId);
       const ms = new Date(timestamp).getTime();
       setLastMessageTimes((prev) =>
-        prev[conversationId] === ms ? prev : { ...prev, [conversationId]: ms },
+        prev[key] === ms ? prev : { ...prev, [key]: ms },
       );
     },
     [],
@@ -52,7 +53,9 @@ export default function ChatList() {
   }, [refetch]);
 
   const sortedConversations = [...conversations].sort(
-    (a, b) => (lastMessageTimes[b.id!] ?? 0) - (lastMessageTimes[a.id!] ?? 0),
+    (a, b) =>
+      (lastMessageTimes[String(b.id)] ?? 0) -
+      (lastMessageTimes[String(a.id)] ?? 0),
   );
 
   if (loading) {

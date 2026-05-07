@@ -1,15 +1,15 @@
 import { TicketMessage } from "./ticket-message";
 
 type TicketUser = {
-  id: number;
+  id: number | string;
   first_name: string;
   last_name: string;
   email: string;
 };
 
 export interface Ticket {
-  id?: number;
-  user_id?: number;
+  id?: number | string;
+  user_id?: number | string;
   title: string;
   user?: TicketUser;
   messages?: TicketMessage[];

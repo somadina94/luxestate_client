@@ -10,7 +10,7 @@ import { formatMessageTime, trimToLength } from "@/utils/helpers";
 
 interface ChatItemProps {
   conversation: Conversation;
-  onLastMessageTime?: (conversationId: number, timestamp: string) => void;
+  onLastMessageTime?: (conversationId: number | string, timestamp: string) => void;
 }
 
 export default function ChatItem({

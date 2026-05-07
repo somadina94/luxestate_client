@@ -1,9 +1,9 @@
 export interface TicketMessage {
-  id?: number;
-  ticket_id: number;
-  sender_id: number;
+  id?: number | string;
+  ticket_id: number | string;
+  sender_id: number | string;
   sender?: {
-    id: number;
+    id: number | string;
     first_name: string;
     last_name: string;
     email?: string;
