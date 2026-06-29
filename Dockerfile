@@ -17,6 +17,7 @@ ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_SOCKET_URL
 ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
 ARG NEXT_PUBLIC_VAPID_PRIVATE_KEY
+ARG CACHEBUST=1
 
 # Set environment variables for build
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
@@ -29,10 +30,15 @@ ENV NEXT_PUBLIC_VAPID_PRIVATE_KEY=$NEXT_PUBLIC_VAPID_PRIVATE_KEY
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build \
+RUN echo "Build cache bust: ${CACHEBUST}" \
+  && npm run build \
   && test -d /app/public \
   && test -d /app/.next/standalone \
-  && test -d /app/.next/static
+  && test -d /app/.next/static \
+  && mkdir -p /deploy/public /deploy/standalone /deploy/static \
+  && cp -a /app/public/. /deploy/public/ \
+  && cp -a /app/.next/standalone/. /deploy/standalone/ \
+  && cp -a /app/.next/static/. /deploy/static/
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -45,15 +51,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
+COPY --from=builder /deploy/public ./public
 
 # Set the correct permission for prerender cache
 RUN mkdir .next && chown nextjs:nodejs .next
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /deploy/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /deploy/static ./.next/static
 
 USER nextjs
 

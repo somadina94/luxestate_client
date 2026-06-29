@@ -2,10 +2,12 @@ name: luxestate-web
 
 services:
   web:
+    image: luxestate-web:latest
     build:
       context: .
       dockerfile: Dockerfile
       args:
+        - CACHEBUST=${CACHEBUST:-1}
         - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
         - NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL}
         - NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
