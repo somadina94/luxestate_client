@@ -119,35 +119,30 @@ mkdir -p logs
 
 # Stop and remove existing containers and local images
 echo "🛑 Stopping existing containers..."
-$DOCKER_COMPOSE down --rmi all --remove-orphans || true
+$DOCKER_COMPOSE down --rmi local --remove-orphans
 
 # Remove ALL build cache (not just unused) to fix corrupted BuildKit layer refs
 echo "🧹 Clearing all Docker build cache..."
-docker buildx prune -af || true
-docker builder prune -af || true
-docker image prune -af || true
+docker buildx prune -af
+docker builder prune -af
+
+# Use isolated buildx driver (BuildKit stays on; avoids Docker 29 host layer corruption)
+echo "🔧 Preparing buildx builder..."
+BUILDX_BUILDER="luxestate-buildx"
+docker buildx rm "${BUILDX_BUILDER}" 2>/dev/null || true
+docker buildx create --name "${BUILDX_BUILDER}" --driver docker-container --use
+docker buildx inspect --bootstrap
+
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+export BUILDKIT_MAX_PARALLELISM=1
 
 # Build and start the application
 echo "🔨 Building and starting the application..."
 echo "🔍 Verifying environment variables are available..."
 echo "NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:0:20}..."
-
-export COMPOSE_DOCKER_CLI_BUILD=1
-export DOCKER_BUILDKIT=1
-export CACHEBUST="cache-$(date +%s)"
-
-IMAGE="luxestate-web:latest"
-docker build --no-cache --pull \
-  --build-arg "CACHEBUST=${CACHEBUST}" \
-  --build-arg "NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}" \
-  --build-arg "NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL:-}" \
-  --build-arg "NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}" \
-  --build-arg "NEXT_PUBLIC_VAPID_PRIVATE_KEY=${NEXT_PUBLIC_VAPID_PRIVATE_KEY:-}" \
-  -t "${IMAGE}" \
-  -f Dockerfile \
-  .
-
-$DOCKER_COMPOSE up -d --no-build --force-recreate
+$DOCKER_COMPOSE build --no-cache --pull
+$DOCKER_COMPOSE up -d --force-recreate
 
 # Check if the container is running
 echo "📊 Checking container status..."

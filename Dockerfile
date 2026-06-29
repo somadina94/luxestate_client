@@ -1,9 +1,6 @@
-# Use the official Node.js runtime as the base image
-FROM node:24-alpine AS base
+# Stage 1: Build
+FROM node:24-alpine AS builder
 
-# Install dependencies and build the application
-FROM base AS builder
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
@@ -12,63 +9,43 @@ RUN npm ci
 
 COPY . .
 
-# Accept build arguments
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_SOCKET_URL
 ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
 ARG NEXT_PUBLIC_VAPID_PRIVATE_KEY
-ARG CACHEBUST=1
 
-# Set environment variables for build
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
 ENV NEXT_PUBLIC_VAPID_PRIVATE_KEY=$NEXT_PUBLIC_VAPID_PRIVATE_KEY
-
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN echo "Build cache bust: ${CACHEBUST}" \
-  && npm run build \
+RUN npm run build \
   && test -d /app/public \
   && test -d /app/.next/standalone \
-  && test -d /app/.next/static \
-  && mkdir -p /deploy/public /deploy/standalone /deploy/static \
-  && cp -a /app/public/. /deploy/public/ \
-  && cp -a /app/.next/standalone/. /deploy/standalone/ \
-  && cp -a /app/.next/static/. /deploy/static/
+  && test -d /app/.next/static
 
-# Production image, copy all the files and run next
-FROM base AS runner
+# Stage 2: Production image
+FROM node:24-alpine
+
 WORKDIR /app
 
 ENV NODE_ENV=production
-# Uncomment the following line in case you want to disable telemetry during runtime.
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-COPY --from=builder /deploy/public ./public
-
-# Set the correct permission for prerender cache
+COPY --from=builder /app/public ./public
 RUN mkdir .next && chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /deploy/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /deploy/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
 EXPOSE 6020
 
 ENV PORT=6020
-# set hostname to localhost
 ENV HOSTNAME="0.0.0.0"
 
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
 CMD ["node", "server.js"]
