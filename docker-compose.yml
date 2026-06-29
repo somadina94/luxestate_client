@@ -1,7 +1,7 @@
-version: "3.8"
+name: luxestate-web
 
 services:
-  luxestate-client:
+  web:
     build:
       context: .
       dockerfile: Dockerfile
@@ -9,17 +9,24 @@ services:
         - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
         - NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL}
         - NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
-    container_name: luxestate-client
+        - NEXT_PUBLIC_VAPID_PRIVATE_KEY=${NEXT_PUBLIC_VAPID_PRIVATE_KEY}
+    container_name: luxestate-web
     ports:
       - "6020:6020"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      - NODE_ENV=production
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+      NEXT_PUBLIC_VAPID_PRIVATE_KEY: ${NEXT_PUBLIC_VAPID_PRIVATE_KEY}
+      NODE_ENV: production
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs
     networks:
-      - luxestate-client-network
+      - luxestate-network
 
 networks:
-  luxestate-client-network:
+  luxestate-network:
     driver: bridge

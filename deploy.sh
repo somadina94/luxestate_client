@@ -1,9 +1,10 @@
 #!/bin/bash
+set -euo pipefail
 
-# Docker Deployment Script for Luxestate Client
+# Docker Deployment Script for Luxestate Web
 # Run this script on your EC2 instance
 
-echo "🐳 Starting Docker deployment of Luxestate Client..."
+echo "🐳 Starting Docker deployment of Luxestate Web..."
 
 # Check Docker installation
 echo "✅ Checking Docker installation..."
@@ -50,7 +51,7 @@ elif [ -f ".env.local" ]; then
 else
     echo "⚠️  No .env or .env.local file found"
     echo "📝 You may need to create .env with your environment variables"
-    echo "   Example: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, etc."
+    echo "   Example: NEXT_PUBLIC_API_BASE_URL, NEXT_PUBLIC_SOCKET_URL, etc."
     exit 1
 fi
 
@@ -58,24 +59,33 @@ fi
 echo "📁 Creating logs directory..."
 mkdir -p logs
 
-# Stop and remove existing containers
+# Stop and remove existing containers and local images
 echo "🛑 Stopping existing containers..."
-$DOCKER_COMPOSE down
+$DOCKER_COMPOSE down --rmi local --remove-orphans
 
-# Remove old images to free up space
-echo "🧹 Cleaning up old images..."
-docker image prune -f
+# Remove ALL build cache (not just unused) to fix corrupted BuildKit layer refs
+echo "🧹 Clearing all Docker build cache..."
+docker buildx prune -af
+docker builder prune -af
 
 # Build and start the application
 echo "🔨 Building and starting the application..."
 echo "🔍 Verifying environment variables are available..."
 echo "NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:0:20}..."
-$DOCKER_COMPOSE up --build -d
+$DOCKER_COMPOSE build --no-cache --pull
+$DOCKER_COMPOSE up -d --force-recreate
 
 # Check if the container is running
 echo "📊 Checking container status..."
 sleep 5
 $DOCKER_COMPOSE ps
+
+if ! $DOCKER_COMPOSE ps --status running | grep -q "web"; then
+    echo "❌ Deployment failed: web container is not running"
+    echo "📋 Recent logs:"
+    $DOCKER_COMPOSE logs --tail=50
+    exit 1
+fi
 
 # Show logs
 echo "📋 Recent logs:"
@@ -85,4 +95,4 @@ echo "✅ Docker deployment completed!"
 echo "📊 Check status with: $DOCKER_COMPOSE ps"
 echo "📋 View logs with: $DOCKER_COMPOSE logs -f"
 echo "🔄 Restart with: $DOCKER_COMPOSE restart"
-echo "🛑 Stop with: $DOCKER_COMPOSE down" 
+echo "🛑 Stop with: $DOCKER_COMPOSE down"
