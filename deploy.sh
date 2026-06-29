@@ -6,6 +6,27 @@ set -euo pipefail
 
 echo "🐳 Starting Docker deployment of Luxestate Web..."
 
+# Sync with the remote default branch (main or master, depending on origin)
+if [ -d .git ]; then
+    echo "📥 Fetching latest code..."
+    git fetch --all --prune
+    DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || true)
+    if [ -z "$DEFAULT_BRANCH" ]; then
+        DEFAULT_BRANCH=$(git branch -r | grep -E 'origin/(main|master)' | head -1 | sed 's@origin/@@' | xargs)
+    fi
+    if [ -n "$DEFAULT_BRANCH" ]; then
+        echo "✅ Syncing to origin/${DEFAULT_BRANCH}..."
+        git checkout "$DEFAULT_BRANCH" 2>/dev/null || git checkout -b "$DEFAULT_BRANCH" "origin/${DEFAULT_BRANCH}"
+        git reset --hard "origin/${DEFAULT_BRANCH}"
+    else
+        echo "⚠️  Could not detect default branch, pulling current branch..."
+        git pull --ff-only
+    fi
+else
+    echo "📥 Cloning repository..."
+    git clone "https://github.com/somadina94/luxestate_client.git" .
+fi
+
 # Check Docker installation
 echo "✅ Checking Docker installation..."
 docker --version
