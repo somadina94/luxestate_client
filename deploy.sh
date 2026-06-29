@@ -6,26 +6,63 @@ set -euo pipefail
 
 echo "🐳 Starting Docker deployment of Luxestate Web..."
 
-# Sync with the remote default branch (main or master, depending on origin)
-if [ -d .git ]; then
-    echo "📥 Fetching latest code..."
-    git fetch --all --prune
-    DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || true)
-    if [ -z "$DEFAULT_BRANCH" ]; then
-        DEFAULT_BRANCH=$(git branch -r | grep -E 'origin/(main|master)' | head -1 | sed 's@origin/@@' | xargs)
+REPO_URL="https://github.com/somadina94/luxestate_client.git"
+
+sync_code() {
+    if [ -d .git ] && git remote get-url origin 2>/dev/null | grep -qi "luxestate_client"; then
+        echo "📥 Fetching latest code..."
+        git fetch --all --prune
+
+        local branch="${DEPLOY_BRANCH:-}"
+        if [ -z "$branch" ]; then
+            branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || true)
+        fi
+        if [ -z "$branch" ]; then
+            branch=$(git branch -r | grep -E 'origin/(main|master)' | head -1 | sed 's@origin/@@' | xargs)
+        fi
+        if [ -z "$branch" ]; then
+            echo "❌ Could not determine branch to deploy"
+            exit 1
+        fi
+
+        if ! git show-ref --verify --quiet "refs/remotes/origin/${branch}"; then
+            echo "❌ Branch origin/${branch} not found"
+            git branch -r
+            exit 1
+        fi
+
+        echo "✅ Syncing to origin/${branch}..."
+        git checkout "$branch" 2>/dev/null || git checkout -b "$branch" "origin/${branch}"
+        git reset --hard "origin/${branch}"
+        return
     fi
-    if [ -n "$DEFAULT_BRANCH" ]; then
-        echo "✅ Syncing to origin/${DEFAULT_BRANCH}..."
-        git checkout "$DEFAULT_BRANCH" 2>/dev/null || git checkout -b "$DEFAULT_BRANCH" "origin/${DEFAULT_BRANCH}"
-        git reset --hard "origin/${DEFAULT_BRANCH}"
-    else
-        echo "⚠️  Could not detect default branch, pulling current branch..."
-        git pull --ff-only
+
+    echo "📥 Cloning luxestate_client (wrong or missing repo detected)..."
+    local dir parent name
+    dir="$(pwd)"
+    parent="$(dirname "$dir")"
+    name="$(basename "$dir")"
+    local env_backup=""
+    local logs_backup=""
+    [ -f .env ] && env_backup="$(mktemp)" && cp .env "$env_backup"
+    [ -d logs ] && logs_backup="$(mktemp -d)" && cp -a logs/. "$logs_backup/" 2>/dev/null || true
+
+    cd "$parent"
+    rm -rf "$name"
+    git clone "$REPO_URL" "$name"
+    cd "$name"
+
+    local branch="${DEPLOY_BRANCH:-main}"
+    if git show-ref --verify --quiet "refs/remotes/origin/${branch}"; then
+        git checkout "$branch" 2>/dev/null || git checkout -b "$branch" "origin/${branch}"
+        git reset --hard "origin/${branch}"
     fi
-else
-    echo "📥 Cloning repository..."
-    git clone "https://github.com/somadina94/luxestate_client.git" .
-fi
+
+    [ -n "$env_backup" ] && [ -s "$env_backup" ] && cp "$env_backup" .env && rm -f "$env_backup"
+    [ -n "$logs_backup" ] && mkdir -p logs && cp -a "$logs_backup/." logs/ && rm -rf "$logs_backup"
+}
+
+sync_code
 
 # Check Docker installation
 echo "✅ Checking Docker installation..."

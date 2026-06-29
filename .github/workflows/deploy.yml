@@ -21,9 +21,28 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             set -e
-            cd ~/luxestate/web
-            git fetch origin
-            git checkout "${{ github.ref_name }}"
-            git pull origin "${{ github.ref_name }}"
+            APP_DIR="$HOME/luxestate/web"
+            REPO="https://github.com/somadina94/luxestate_client.git"
+            BRANCH="${{ github.ref_name }}"
+
+            mkdir -p "$(dirname "$APP_DIR")"
+
+            if [ -d "$APP_DIR/.git" ] && git -C "$APP_DIR" remote get-url origin 2>/dev/null | grep -qi luxestate_client; then
+              cd "$APP_DIR"
+              git fetch origin
+              git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
+              git reset --hard "origin/$BRANCH"
+            else
+              ENV_BAK=$(mktemp)
+              LOGS_BAK=$(mktemp -d)
+              [ -f "$APP_DIR/.env" ] && cp "$APP_DIR/.env" "$ENV_BAK"
+              [ -d "$APP_DIR/logs" ] && cp -a "$APP_DIR/logs/." "$LOGS_BAK/" 2>/dev/null || true
+              rm -rf "$APP_DIR"
+              git clone -b "$BRANCH" "$REPO" "$APP_DIR"
+              cd "$APP_DIR"
+              [ -s "$ENV_BAK" ] && cp "$ENV_BAK" .env
+              [ "$(ls -A "$LOGS_BAK" 2>/dev/null)" ] && mkdir -p logs && cp -a "$LOGS_BAK/." logs/
+            fi
+
             chmod +x ./deploy.sh
-            ./deploy.sh
+            DEPLOY_BRANCH="$BRANCH" ./deploy.sh
