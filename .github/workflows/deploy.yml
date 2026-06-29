@@ -3,6 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches: [master, main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -21,40 +22,66 @@ jobs:
           [ -n "${{ secrets.VPS_PORT }}" ] || { echo "::error::VPS_PORT secret is not set on this repository"; missing=1; }
           exit "$missing"
 
+      - name: Install SSH client
+        run: sudo apt-get update && sudo apt-get install -y openssh-client sshpass
+
       - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_PORT }}
-          timeout: 60s
-          command_timeout: 30m
-          debug: true
-          script: |
-            set -e
-            APP_DIR="$HOME/luxestate/web"
-            REPO="https://github.com/somadina94/luxestate_client.git"
-            BRANCH="${{ github.ref_name }}"
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
 
-            mkdir -p "$(dirname "$APP_DIR")"
+          for attempt in $(seq 1 5); do
+            echo "::group::Deploy attempt ${attempt}/5"
+            if sshpass -p "${VPS_PASSWORD}" ssh \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o ConnectTimeout=60 \
+              -o ServerAliveInterval=15 \
+              -o ServerAliveCountMax=4 \
+              -p "${VPS_PORT}" \
+              "${VPS_USERNAME}@${VPS_HOST}" \
+              "DEPLOY_BRANCH='${BRANCH}' bash -s" <<'EOF'
+          set -e
+          APP_DIR="$HOME/luxestate/web"
+          REPO="https://github.com/somadina94/luxestate_client.git"
+          BRANCH="${DEPLOY_BRANCH:-main}"
 
-            if [ -d "$APP_DIR/.git" ] && git -C "$APP_DIR" remote get-url origin 2>/dev/null | grep -qi luxestate_client; then
-              cd "$APP_DIR"
-              git fetch origin
-              git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
-              git reset --hard "origin/$BRANCH"
-            else
-              ENV_BAK=$(mktemp)
-              LOGS_BAK=$(mktemp -d)
-              [ -f "$APP_DIR/.env" ] && cp "$APP_DIR/.env" "$ENV_BAK"
-              [ -d "$APP_DIR/logs" ] && cp -a "$APP_DIR/logs/." "$LOGS_BAK/" 2>/dev/null || true
-              rm -rf "$APP_DIR"
-              git clone -b "$BRANCH" "$REPO" "$APP_DIR"
-              cd "$APP_DIR"
-              [ -s "$ENV_BAK" ] && cp "$ENV_BAK" .env
-              [ "$(ls -A "$LOGS_BAK" 2>/dev/null)" ] && mkdir -p logs && cp -a "$LOGS_BAK/." logs/
+          mkdir -p "$(dirname "$APP_DIR")"
+
+          if [ -d "$APP_DIR/.git" ] && git -C "$APP_DIR" remote get-url origin 2>/dev/null | grep -qi luxestate_client; then
+            cd "$APP_DIR"
+            git fetch origin
+            git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
+            git reset --hard "origin/$BRANCH"
+          else
+            ENV_BAK=$(mktemp)
+            LOGS_BAK=$(mktemp -d)
+            [ -f "$APP_DIR/.env" ] && cp "$APP_DIR/.env" "$ENV_BAK"
+            [ -d "$APP_DIR/logs" ] && cp -a "$APP_DIR/logs/." "$LOGS_BAK/" 2>/dev/null || true
+            rm -rf "$APP_DIR"
+            git clone -b "$BRANCH" "$REPO" "$APP_DIR"
+            cd "$APP_DIR"
+            [ -s "$ENV_BAK" ] && cp "$ENV_BAK" .env
+            [ "$(ls -A "$LOGS_BAK" 2>/dev/null)" ] && mkdir -p logs && cp -a "$LOGS_BAK/." logs/
+          fi
+
+          chmod +x ./deploy.sh
+          DEPLOY_BRANCH="$BRANCH" ./deploy.sh
+          EOF
+            then
+              echo "::endgroup::"
+              echo "Deploy succeeded on attempt ${attempt}"
+              exit 0
             fi
+            echo "::endgroup::"
+            echo "Attempt ${attempt} failed, waiting 30s..."
+            sleep 30
+          done
 
-            chmod +x ./deploy.sh
-            DEPLOY_BRANCH="$BRANCH" ./deploy.sh
+          echo "::error::All 5 deploy attempts failed (SSH timeout or connection refused)"
+          exit 1
